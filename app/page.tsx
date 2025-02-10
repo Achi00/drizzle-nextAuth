@@ -1,34 +1,45 @@
-// import { getUsers } from "@/utils/getUsers";
+// app/page.tsx (or any server component)
+import { cookies } from "next/headers";
 
-import AuthStatus from "./components/AuthStatus";
+export default async function Home() {
+  // Get the cookies from the incoming request
+  const cookieStore = await cookies();
+  // Build a cookie header string by concatenating all cookies.
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join("; ");
 
-const Home = async () => {
-  // const users = await getUsers();
-  // console.log("users: " + JSON.stringify(users));
-  // const createUser = async () => {
-  //   try {
-  //     const res = await fetch("/api/users", {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify({ fullName: "John Doe", email: "achi@ac55asa" }),
-  //     });
-  //     console.log(res);
-  //   } catch (error) {
-  //     console.error("Error creating user:", error);
-  //   }
-  // };
+  // Use a relative URL for an internal fetch
+  const response = await fetch("http://localhost:3000/api/images", {
+    // Forward the cookie header so the API route (and middleware) sees the session
+    headers: {
+      cookie: cookieHeader,
+    },
+    // Prevent caching to ensure fresh data on each request
+    cache: "no-store",
+  });
 
-  // createUser();
+  if (!response.ok) {
+    // Optionally handle error responses here.
+    const errorData = await response.json();
+    throw new Error(
+      `Failed to fetch images: ${errorData.error || response.statusText}`
+    );
+  }
+
+  const images = await response.json();
 
   return (
     <div>
-      <h1>hello</h1>
-      <AuthStatus />
-      {/* {data && data.map((user) => <p key={user}>{JSON.stringify(user)}</p>)} */}
+      <h1>User Images</h1>
+      <ul>
+        {images.map((image) => (
+          <li key={image.id}>
+            <img src={image.imageUrl} alt={`Image ${image.id}`} width={200} />
+          </li>
+        ))}
+      </ul>
     </div>
   );
-};
-
-export default Home;
+}
